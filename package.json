@@ -9,7 +9,8 @@
     "lint": "next lint",
     "db:setup": "tsx --env-file=.env.local scripts/setup-db.ts",
     "db:test": "tsx --env-file=.env.local -e \"import { testConnection } from './lib/db'; testConnection().then(r => console.log('Connection:', r ? '✅ Success' : '❌ Failed'));\"",
-    "test:llm": "tsx --env-file=.env.local scripts/test-llm.ts"
+    "test:llm": "tsx --env-file=.env.local scripts/test-llm.ts",
+    "db:seed": "tsx --env-file=.env.local scripts/seed-test-data.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
@@ -19,6 +20,7 @@
     "openai": "^5.10.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "uuid": "^11.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -26,6 +28,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.3",
     "typescript": "^5"
