@@ -1,29 +1,30 @@
 import { Pool } from '@neondatabase/serverless';
 
-// データベース接続プールの作成
+// データベース接続設定
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is not set in environment variables');
+}
+
+// Poolモード用の設定（サーバーレス環境に最適化）
 let pool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!pool) {
-    const databaseUrl = process.env.DATABASE_URL;
-    
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL is not set in environment variables');
-    }
-    
-    // 接続プールの設定を調整
+    // サーバーレス環境に最適化された設定
     pool = new Pool({ 
       connectionString: databaseUrl,
-      max: 10, // 最大接続数
-      idleTimeoutMillis: 30000, // アイドルタイムアウト
-      connectionTimeoutMillis: 10000, // 接続タイムアウト
+      max: 1, // サーバーレスでは接続数を最小限に
+      idleTimeoutMillis: 0, // アイドル接続を即座に閉じる
+      connectionTimeoutMillis: 30000, // NEONの起動時間を考慮して30秒に
     });
   }
   
   return pool;
 }
 
-// SQLクエリを実行する汎用関数
+// SQLクエリを実行する汎用関数（最適化版）
 export async function query<T = any>(
   text: string,
   params?: any[]
@@ -47,7 +48,8 @@ export async function query<T = any>(
       // 接続エラーの場合はプールをリセット
       if (error instanceof Error && 
           (error.message.includes('Connection terminated') || 
-           error.message.includes('Client has encountered a connection error'))) {
+           error.message.includes('Client has encountered a connection error') ||
+           error.message.includes('timeout'))) {
         console.error('Connection error detected - resetting pool');
         pool = null;
         
