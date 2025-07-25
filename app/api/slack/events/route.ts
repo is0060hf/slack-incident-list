@@ -1,9 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 
-// Slack Event Subscriptionsのチャレンジ検証用エンドポイント
+// Slack署名を検証する関数
+async function verifySlackSignature(
+  request: NextRequest,
+  body: string
+): Promise<boolean> {
+  const signingSecret = process.env.SLACK_SIGNING_SECRET;
+  if (!signingSecret) {
+    console.error('SLACK_SIGNING_SECRET is not set');
+    return false;
+  }
+
+  const signature = request.headers.get('x-slack-signature');
+  const timestamp = request.headers.get('x-slack-request-timestamp');
+  
+  if (!signature || !timestamp) {
+    return false;
+  }
+
+  // タイムスタンプが5分以内であることを確認
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - parseInt(timestamp)) > 60 * 5) {
+    return false;
+  }
+
+  // 署名を計算
+  const sigBasestring = `v0:${timestamp}:${body}`;
+  const mySignature = 'v0=' + crypto
+    .createHmac('sha256', signingSecret)
+    .update(sigBasestring)
+    .digest('hex');
+
+  // 署名を比較（タイミング攻撃を防ぐため、crypto.timingSafeEqualを使用）
+  return crypto.timingSafeEqual(
+    Buffer.from(mySignature),
+    Buffer.from(signature)
+  );
+}
+
+// Slack Event Subscriptionsのエンドポイント
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // リクエストボディを文字列として取得
+    const bodyText = await request.text();
+    
+    // Slack署名を検証（URL verification時はスキップ）
+    const body = JSON.parse(bodyText);
+    
+    // URL verification challengeの場合は署名検証をスキップ
+    if (body.type !== 'url_verification') {
+      const isValid = await verifySlackSignature(request, bodyText);
+      if (!isValid) {
+        console.error('Invalid Slack signature');
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+    }
     
     // URL verification challenge
     if (body.type === 'url_verification') {
@@ -13,10 +68,27 @@ export async function POST(request: NextRequest) {
     
     // Event callback (実際のイベント処理)
     if (body.type === 'event_callback') {
-      console.log('Received event:', body.event);
+      const event = body.event;
+      console.log('Received event:', event);
       
-      // 今はログ出力のみ
-      // TODO: ここでインシデント検出ロジックを実装
+      // メッセージイベントの処理
+      if (event.type === 'message') {
+        // スレッドのメッセージかどうかを確認
+        const isThreadMessage = !!event.thread_ts;
+        console.log('Message details:', {
+          channel: event.channel,
+          user: event.user,
+          text: event.text,
+          ts: event.ts,
+          thread_ts: event.thread_ts,
+          isThreadMessage
+        });
+        
+        // TODO: ここでインシデント検出ロジックを実装
+        // - メッセージをデータベースに保存
+        // - LLMで障害判定
+        // - インシデントの作成/更新
+      }
       
       return NextResponse.json({ ok: true });
     }

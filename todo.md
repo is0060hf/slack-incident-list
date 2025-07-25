@@ -32,12 +32,12 @@
   - 確認方法: 環境変数が正しく読み込めることをconsole.logで確認
 
 ### 2. データベース設定
-- [ ] **NEON PostgreSQLプロジェクトの作成**
+- [x] **NEON PostgreSQLプロジェクトの作成**
   - アクション: NEONダッシュボードで新規プロジェクトを作成し、接続文字列を取得
   - 達成条件: DATABASE_URLが取得でき、`.env.local`に設定済み
   - 確認方法: データベース接続テストスクリプトで接続確認
 
-- [ ] **データベーススキーマの作成**
+- [x] **データベーススキーマの作成**
   - アクション: 設計書に基づいて以下のテーブルを作成
     - incidents テーブル
     - incident_messages テーブル
@@ -45,13 +45,13 @@
   - 達成条件: すべてのテーブルとインデックスが正常に作成される
   - 確認方法: データベースクライアントで各テーブルの存在とスキーマを確認
 
-- [ ] **データベース接続ユーティリティの実装**
+- [x] **データベース接続ユーティリティの実装**
   - アクション: `/lib/db.ts`にNEON接続用のユーティリティ関数を実装
   - 達成条件: データベースへの接続とクエリ実行が可能
   - 確認方法: 簡単なSELECTクエリでテスト
 
 ### 3. Slack App設定
-- [ ] **Slack Appの作成と設定**
+- [x] **Slack Appの作成と設定**
   - アクション: api.slack.comで新規Appを作成し、必要なOAuth Scopeを設定
     - channels:history
     - channels:read
@@ -60,13 +60,13 @@
   - 達成条件: Bot User OAuth Tokenが取得でき、環境変数に設定済み
   - 確認方法: Slack APIテストエンドポイントでトークンの有効性確認
 
-- [ ] **Event Subscriptionsの設定**
+- [x] **Event Subscriptionsの設定**
   - アクション: Slack Appでイベントサブスクリプションを有効化し、以下を設定
     - message.channels（スレッドの返信も含む）
   - 達成条件: Request URLの検証が通り、イベントが有効化される
   - 確認方法: Slackチャンネルでメッセージとスレッド返信を投稿し、Webhookが受信される
 
-- [ ] **Slack Webhook受信エンドポイントの実装**
+- [x] **Slack Webhook受信エンドポイントの実装**
   - アクション: `/app/api/slack/events/route.ts`にPOSTエンドポイントを実装
   - 達成条件: Slack署名検証を含むWebhook受信が可能
   - 確認方法: Slackからのチャレンジリクエストに正常に応答
