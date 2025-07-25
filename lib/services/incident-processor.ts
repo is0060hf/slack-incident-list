@@ -13,9 +13,20 @@ const MIN_CONFIDENCE_FOR_AUTO_CREATE = parseFloat(
   process.env.MIN_CONFIDENCE_FOR_AUTO_CREATE || '0.5'
 );
 
+// 監視対象チャンネルのリスト（カンマ区切り）
+const MONITOR_CHANNELS = process.env.MONITOR_CHANNELS 
+  ? process.env.MONITOR_CHANNELS.split(',').map(ch => ch.trim())
+  : [];
+
 // メッセージイベントを処理
 export async function processMessageEvent(message: SlackMessage): Promise<void> {
   try {
+    // 監視対象チャンネルの確認
+    if (MONITOR_CHANNELS.length > 0 && !MONITOR_CHANNELS.includes(message.channel)) {
+      console.log(`Channel ${message.channel} is not in monitor list, skipping`);
+      return;
+    }
+    
     // スレッドのルートメッセージのタイムスタンプを取得
     const threadTs = message.thread_ts || message.ts;
     

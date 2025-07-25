@@ -24,6 +24,15 @@ interface Stats {
   highSeverity: number;
 }
 
+interface MonitoringConfig {
+  isLimited: boolean;
+  channelCount: number;
+  channels: Array<{ id: string; name: string; isActive: boolean }>;
+  notificationEnabled: boolean;
+  severityThreshold: number;
+  confidenceThreshold: number;
+}
+
 export default function Home() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -33,9 +42,11 @@ export default function Home() {
   const [confidenceFilter, setConfidenceFilter] = useState<string>('0.7');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [monitoringConfig, setMonitoringConfig] = useState<MonitoringConfig | null>(null);
 
   useEffect(() => {
     fetchIncidents();
+    fetchMonitoringConfig();
   }, [statusFilter, severityFilter, confidenceFilter, dateFrom, dateTo]);
 
   const fetchIncidents = async () => {
@@ -56,6 +67,16 @@ export default function Home() {
       console.error('Failed to fetch incidents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMonitoringConfig = async () => {
+    try {
+      const response = await fetch('/api/monitoring');
+      const data = await response.json();
+      setMonitoringConfig(data);
+    } catch (error) {
+      console.error('Failed to fetch monitoring config:', error);
     }
   };
 
@@ -88,6 +109,34 @@ export default function Home() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 監視設定情報 */}
+      {monitoringConfig && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-blue-900 mb-2">監視設定</h3>
+          <div className="text-sm text-blue-800">
+            {monitoringConfig.isLimited ? (
+              <div>
+                <p>監視対象: {monitoringConfig.channelCount}チャンネル</p>
+                <ul className="mt-1 ml-4">
+                  {monitoringConfig.channels.map(channel => (
+                    <li key={channel.id}>
+                      #{channel.name} ({channel.id})
+                      {!channel.isActive && <span className="text-red-600 ml-2">（アクセス不可）</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p>監視対象: Botが招待されているすべてのチャンネル</p>
+            )}
+            <p className="mt-2">
+              自動検出閾値: 信頼度{(monitoringConfig.confidenceThreshold * 100).toFixed(0)}%以上 / 
+              通知: {monitoringConfig.notificationEnabled ? `重要度${monitoringConfig.severityThreshold}以上` : '無効'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 統計カード */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
