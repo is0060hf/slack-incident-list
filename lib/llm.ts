@@ -82,10 +82,12 @@ const INCIDENT_ANALYSIS_PROMPT = `
   "title": "インシデントの適切なタイトル（具体的で簡潔に）",
   "discovery_process": "発覚した経緯（誰が、いつ、どのように問題を発見したか）",
   "issue_overview": "トラブルの概要（何が起きたか、影響範囲、影響を受けたシステムやユーザー）",
-  "root_cause": "主な原因（判明している原因、推測される原因を分けて記載）",
+  "root_cause": "主な原因を文字列として記載（判明している原因と推測される原因を区別して一つの文章で記載）",
   "actions_taken": "対応や改善策（実施された対応、その結果、残っている作業）",
   "future_considerations": "今後検討が必要なこと（再発防止策、改善提案、監視強化ポイント）"
 }
+
+重要：すべてのフィールドは文字列（string）として出力してください。オブジェクトや配列は使用しないでください。
 
 注意事項：
 - 会話から読み取れる事実を基に記述してください
@@ -192,7 +194,7 @@ export async function generateIncidentReport(
       messages: [
         {
           role: 'system',
-          content: 'あなたはシステム障害の分析と報告書作成の専門家です。提供された会話ログから、詳細で実用的なインシデント報告書を作成してください。'
+          content: 'あなたはシステム障害の分析と報告書作成の専門家です。提供された会話ログから、詳細で実用的なインシデント報告書を作成してください。すべてのフィールドは文字列として出力し、オブジェクトや配列は使用しないでください。'
         },
         {
           role: 'user',
@@ -210,6 +212,18 @@ export async function generateIncidentReport(
     
     const result = JSON.parse(content);
     console.log('Raw analysis result:', result);
+    
+    // root_causeがオブジェクトの場合は文字列に変換
+    if (typeof result.root_cause === 'object' && result.root_cause !== null) {
+      const causes = [];
+      if (result.root_cause.identified_causes) {
+        causes.push(`【判明している原因】${result.root_cause.identified_causes}`);
+      }
+      if (result.root_cause.speculated_causes) {
+        causes.push(`【推測される原因】${result.root_cause.speculated_causes}`);
+      }
+      result.root_cause = causes.join(' ');
+    }
     
     // Zodでバリデーション
     const validatedResult = IncidentAnalysisReportSchema.parse(result);
