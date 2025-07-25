@@ -27,6 +27,18 @@ export const IncidentDetectionResultSchema = z.object({
 
 export type IncidentDetectionResult = z.infer<typeof IncidentDetectionResultSchema>;
 
+// インシデント分析レポートのスキーマ定義
+export const IncidentAnalysisReportSchema = z.object({
+  title: z.string(),
+  discovery_process: z.string(),
+  issue_overview: z.string(),
+  root_cause: z.string(),
+  actions_taken: z.string(),
+  future_considerations: z.string()
+});
+
+export type IncidentAnalysisReport = z.infer<typeof IncidentAnalysisReportSchema>;
+
 // 障害判定プロンプトテンプレート
 const INCIDENT_DETECTION_PROMPT = `
 以下のSlackスレッドの会話を分析し、システム障害について議論しているか判定してください。
@@ -55,6 +67,31 @@ const INCIDENT_DETECTION_PROMPT = `
 2: 中 - 一部機能の問題、複数ユーザーへの影響
 3: 高 - 主要機能の問題、多数のユーザーへの影響
 4: 緊急 - システム全体の障害、全ユーザーへの影響
+`;
+
+// インシデント分析レポートプロンプトテンプレート
+const INCIDENT_ANALYSIS_PROMPT = `
+以下のSlackスレッドの会話を詳細に分析し、インシデントの報告書を作成してください。
+会話の時系列と内容を精査し、障害の全体像を把握した上で、以下の項目について詳しく記述してください。
+
+会話内容：
+{messages}
+
+以下のJSON形式で、インシデント報告書を作成してください：
+{
+  "title": "インシデントの適切なタイトル（具体的で簡潔に）",
+  "discovery_process": "発覚した経緯（誰が、いつ、どのように問題を発見したか）",
+  "issue_overview": "トラブルの概要（何が起きたか、影響範囲、影響を受けたシステムやユーザー）",
+  "root_cause": "主な原因（判明している原因、推測される原因を分けて記載）",
+  "actions_taken": "対応や改善策（実施された対応、その結果、残っている作業）",
+  "future_considerations": "今後検討が必要なこと（再発防止策、改善提案、監視強化ポイント）"
+}
+
+注意事項：
+- 会話から読み取れる事実を基に記述してください
+- 推測と事実を明確に区別してください
+- 技術的な詳細も含めて記載してください
+- 時系列がわかるように記述してください
 `;
 
 // 汎用的なLLM呼び出し関数
@@ -131,6 +168,56 @@ export async function detectIncident(
       description: 'Failed to analyze the messages',
       keywords: []
     };
+  }
+}
+
+// インシデント分析レポートを生成
+export async function generateIncidentReport(
+  messages: Array<{ user: string; text: string; ts: string }>
+): Promise<IncidentAnalysisReport> {
+  try {
+    const client = getOpenAIClient();
+    
+    // メッセージを整形
+    const formattedMessages = messages
+      .map(m => `[${new Date(parseFloat(m.ts) * 1000).toLocaleString('ja-JP')}] ${m.user}: ${m.text}`)
+      .join('\n');
+    
+    const prompt = INCIDENT_ANALYSIS_PROMPT.replace('{messages}', formattedMessages);
+    
+    console.log('Generating incident analysis report...');
+    
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'あなたはシステム障害の分析と報告書作成の専門家です。提供された会話ログから、詳細で実用的なインシデント報告書を作成してください。'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
+    });
+    
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content in OpenAI response');
+    }
+    
+    const result = JSON.parse(content);
+    console.log('Raw analysis result:', result);
+    
+    // Zodでバリデーション
+    const validatedResult = IncidentAnalysisReportSchema.parse(result);
+    
+    return validatedResult;
+  } catch (error) {
+    console.error('Error generating incident report:', error);
+    throw error;
   }
 }
 

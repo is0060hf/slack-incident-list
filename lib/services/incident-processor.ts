@@ -115,7 +115,6 @@ async function createIncidentFromDetection(
       description: detectionResult.description,
       severity_level: detectionResult.severity_level,
       confidence_score: detectionResult.confidence,
-      detected_at: new Date(),
       llm_analysis: detectionResult
     };
     

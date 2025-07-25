@@ -1,5 +1,11 @@
 import { query, transaction } from '../db';
-import { Incident, IncidentMessage, CreateIncidentData } from '../models/incident';
+import { 
+  Incident, 
+  IncidentMessage, 
+  CreateIncidentData,
+  IncidentReport,
+  CreateReportData
+} from '../models/incident';
 
 // インシデントをスレッドタイムスタンプで検索
 export async function findIncidentByThreadTs(
@@ -10,6 +16,17 @@ export async function findIncidentByThreadTs(
     [threadTs]
   );
   
+  return results.length > 0 ? results[0] : null;
+}
+
+// インシデントをIDで検索
+export async function findIncidentById(
+  id: string
+): Promise<Incident | null> {
+  const results = await query<Incident>(
+    'SELECT * FROM incidents WHERE id = $1',
+    [id]
+  );
   return results.length > 0 ? results[0] : null;
 }
 
@@ -30,7 +47,7 @@ export async function createIncident(
       data.description,
       data.severity_level,
       data.confidence_score,
-      data.detected_at,
+      new Date(),
       JSON.stringify(data.llm_analysis)
     ]
   );
@@ -73,13 +90,12 @@ export async function saveMessage(
 }
 
 // インシデントに関連するメッセージを取得
-export async function getIncidentMessages(
-  incidentId: string
-): Promise<IncidentMessage[]> {
-  return await query<IncidentMessage>(
+export async function getIncidentMessages(incidentId: string): Promise<IncidentMessage[]> {
+  const messages = await query<IncidentMessage>(
     'SELECT * FROM incident_messages WHERE incident_id = $1 ORDER BY created_at ASC',
     [incidentId]
   );
+  return messages;
 }
 
 // メッセージが既に保存されているか確認
@@ -115,7 +131,7 @@ export async function createIncidentWithMessages(
       incidentData.description,
       incidentData.severity_level,
       incidentData.confidence_score,
-      incidentData.detected_at,
+      new Date(),
       JSON.stringify(incidentData.llm_analysis)
     ]
   });
@@ -136,4 +152,47 @@ export async function createIncidentWithMessages(
     incident: (results[0] as any[])[0] as Incident,
     messages: results.slice(1).map(r => (r as any[])[0]) as IncidentMessage[]
   };
+} 
+
+// レポートを保存
+export async function saveReport(data: CreateReportData): Promise<IncidentReport> {
+  const results = await query<IncidentReport>(
+    `INSERT INTO incident_reports (
+      incident_id, report_type, title, discovery_process, 
+      issue_overview, root_cause, actions_taken, 
+      future_considerations, generated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+    RETURNING *`,
+    [
+      data.incident_id,
+      data.report_type || 'analysis',
+      data.title,
+      data.discovery_process,
+      data.issue_overview,
+      data.root_cause,
+      data.actions_taken,
+      data.future_considerations,
+      data.generated_by || 'system'
+    ]
+  );
+  
+  return results[0];
+}
+
+// インシデントのレポートを取得
+export async function getIncidentReports(incidentId: string): Promise<IncidentReport[]> {
+  const reports = await query<IncidentReport>(
+    'SELECT * FROM incident_reports WHERE incident_id = $1 ORDER BY generated_at DESC',
+    [incidentId]
+  );
+  return reports;
+}
+
+// 最新のレポートを取得
+export async function getLatestReport(incidentId: string): Promise<IncidentReport | null> {
+  const reports = await query<IncidentReport>(
+    'SELECT * FROM incident_reports WHERE incident_id = $1 ORDER BY generated_at DESC LIMIT 1',
+    [incidentId]
+  );
+  return reports.length > 0 ? reports[0] : null;
 } 

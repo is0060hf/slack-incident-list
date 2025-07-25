@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { Incident, IncidentMessage } from '@/lib/models/incident';
+import { Incident, IncidentMessage, IncidentReport } from '@/lib/models/incident';
 import { z } from 'zod';
 
 // インシデント詳細取得
@@ -38,10 +38,17 @@ export async function GET(
       [id]
     );
     
+    // 分析レポートを取得
+    const reports = await query<IncidentReport>(
+      'SELECT * FROM incident_reports WHERE incident_id = $1 ORDER BY generated_at DESC',
+      [id]
+    );
+    
     return NextResponse.json({
       incident,
       messages,
-      reviews
+      reviews,
+      reports
     });
     
   } catch (error) {

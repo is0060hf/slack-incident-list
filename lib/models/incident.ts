@@ -53,9 +53,37 @@ export interface CreateIncidentData {
   slack_thread_ts: string;
   channel_id: string;
   title: string;
-  description: string;
+  description?: string;
   severity_level: number;
   confidence_score: number;
-  detected_at: Date;
-  llm_analysis: Record<string, any>;
+  impact_users?: number;
+  llm_analysis?: any;
+}
+
+// インシデント分析レポート
+export interface IncidentReport {
+  id: string;
+  incident_id: string;
+  report_type: string;
+  title: string;
+  discovery_process: string;
+  issue_overview: string;
+  root_cause: string;
+  actions_taken: string;
+  future_considerations: string;
+  generated_by?: string;
+  generated_at: Date;
+}
+
+// レポート生成データ
+export interface CreateReportData {
+  incident_id: string;
+  report_type?: string;
+  title: string;
+  discovery_process: string;
+  issue_overview: string;
+  root_cause: string;
+  actions_taken: string;
+  future_considerations: string;
+  generated_by?: string;
 } 

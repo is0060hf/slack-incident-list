@@ -47,6 +47,25 @@ CREATE TABLE IF NOT EXISTS incident_reviews (
   reviewed_at TIMESTAMP DEFAULT NOW()
 );
 
+-- incident_reports テーブル（分析レポート保存用）
+CREATE TABLE IF NOT EXISTS incident_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  incident_id UUID REFERENCES incidents(id) ON DELETE CASCADE,
+  report_type VARCHAR(50) NOT NULL DEFAULT 'analysis',
+  title VARCHAR(255) NOT NULL,
+  discovery_process TEXT,
+  issue_overview TEXT,
+  root_cause TEXT,
+  actions_taken TEXT,
+  future_considerations TEXT,
+  generated_by VARCHAR(100),
+  generated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- incident_reports テーブルのインデックス
+CREATE INDEX IF NOT EXISTS idx_reports_incident ON incident_reports(incident_id);
+CREATE INDEX IF NOT EXISTS idx_reports_generated_at ON incident_reports(generated_at);
+
 -- 更新時刻を自動更新するトリガー関数
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

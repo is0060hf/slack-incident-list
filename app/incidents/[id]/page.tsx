@@ -36,12 +36,27 @@ interface Review {
   reviewed_at: string;
 }
 
+interface Report {
+  id: string;
+  incident_id: string;
+  report_type: string;
+  title: string;
+  discovery_process: string;
+  issue_overview: string;
+  root_cause: string;
+  actions_taken: string;
+  future_considerations: string;
+  generated_by: string;
+  generated_at: string;
+}
+
 export default function IncidentDetail() {
   const params = useParams();
   const router = useRouter();
   const [incident, setIncident] = useState<Incident | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
@@ -50,6 +65,7 @@ export default function IncidentDetail() {
     review_notes: '',
     reviewed_by: ''
   });
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   useEffect(() => {
     fetchIncidentDetail();
@@ -63,6 +79,7 @@ export default function IncidentDetail() {
       setIncident(data.incident);
       setMessages(data.messages);
       setReviews(data.reviews);
+      setReports(data.reports || []);
       setEditData({
         title: data.incident.title,
         description: data.incident.description || '',
@@ -107,6 +124,31 @@ export default function IncidentDetail() {
       }
     } catch (error) {
       console.error('Failed to submit review:', error);
+    }
+  };
+
+  const generateReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const response = await fetch(`/api/incidents/${params.id}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regenerate: true })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('レポートを生成しました');
+        fetchIncidentDetail();
+      } else {
+        const error = await response.json();
+        alert(`レポート生成に失敗しました: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('レポートの生成に失敗しました');
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -360,6 +402,64 @@ export default function IncidentDetail() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 分析レポート */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-medium text-gray-900">分析レポート</h2>
+          <button
+            onClick={generateReport}
+            disabled={isGeneratingReport}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+          >
+            {isGeneratingReport ? '生成中...' : 'レポート生成'}
+          </button>
+        </div>
+
+        {reports.length > 0 ? (
+          <div className="space-y-6">
+            {reports.map((report, index) => (
+              <div key={report.id} className={`border rounded-lg p-6 ${index === 0 ? 'border-purple-300 bg-purple-50' : 'border-gray-200'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-lg">{report.title}</h3>
+                  <span className="text-sm text-gray-500">
+                    {format(new Date(report.generated_at), 'yyyy/MM/dd HH:mm', { locale: ja })}
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-1">発覚した経緯</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{report.discovery_process}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-1">トラブルの概要</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{report.issue_overview}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-1">主な原因</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{report.root_cause}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-1">対応や改善策</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{report.actions_taken}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-1">今後検討が必要なこと</h4>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{report.future_considerations}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">まだレポートが生成されていません</p>
+        )}
       </div>
     </div>
   );
