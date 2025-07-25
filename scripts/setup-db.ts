@@ -33,13 +33,13 @@ async function setupDatabase() {
     statements.push(...basicStatements);
     
     // トリガー関数を1つのステートメントとして追加
-    const triggerFunctionMatch = schemaSql.match(/CREATE OR REPLACE FUNCTION.*?language 'plpgsql'/s);
+    const triggerFunctionMatch = schemaSql.match(/CREATE OR REPLACE FUNCTION[\s\S]*?language 'plpgsql'/);
     if (triggerFunctionMatch) {
       statements.push(triggerFunctionMatch[0]);
     }
     
     // トリガーを追加
-    const triggerMatch = schemaSql.match(/CREATE TRIGGER.*?update_updated_at_column\(\)/s);
+    const triggerMatch = schemaSql.match(/CREATE TRIGGER[\s\S]*?update_updated_at_column\(\)/);
     if (triggerMatch) {
       statements.push(triggerMatch[0]);
     }
