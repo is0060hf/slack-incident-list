@@ -11,7 +11,13 @@ export function getPool(): Pool {
       throw new Error('DATABASE_URL is not set in environment variables');
     }
     
-    pool = new Pool({ connectionString: databaseUrl });
+    // 接続プールの設定を調整
+    pool = new Pool({ 
+      connectionString: databaseUrl,
+      max: 10, // 最大接続数
+      idleTimeoutMillis: 30000, // アイドルタイムアウト
+      connectionTimeoutMillis: 10000, // 接続タイムアウト
+    });
   }
   
   return pool;
@@ -22,15 +28,41 @@ export async function query<T = any>(
   text: string,
   params?: any[]
 ): Promise<T[]> {
-  const pool = getPool();
+  let retries = 3;
+  let lastError: any;
   
-  try {
-    const result = await pool.query(text, params);
-    return result.rows as T[];
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
+  while (retries > 0) {
+    try {
+      const pool = getPool();
+      const result = await pool.query(text, params);
+      return result.rows as T[];
+    } catch (error) {
+      lastError = error;
+      retries--;
+      
+      console.error(`Database query error (retries left: ${retries}):`, error);
+      console.error('Query:', text);
+      console.error('Params:', params);
+      
+      // 接続エラーの場合はプールをリセット
+      if (error instanceof Error && 
+          (error.message.includes('Connection terminated') || 
+           error.message.includes('Client has encountered a connection error'))) {
+        console.error('Connection error detected - resetting pool');
+        pool = null;
+        
+        // リトライ前に少し待機
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } else {
+        // 接続エラー以外の場合はリトライしない
+        break;
+      }
+    }
   }
+  
+  throw lastError;
 }
 
 // トランザクション実行用の関数
