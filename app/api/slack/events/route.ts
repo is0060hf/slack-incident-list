@@ -69,10 +69,22 @@ export async function POST(request: NextRequest) {
     // Event callback (実際のイベント処理)
     if (body.type === 'event_callback') {
       const event = body.event;
-      console.log('Received event:', event);
+      const logPrefix = `[SlackEvent ${event?.ts || 'unknown'}]`;
+      
+      console.log(`${logPrefix} Slackイベント受信:`, {
+        type: event?.type,
+        channel: event?.channel,
+        user: event?.user,
+        ts: event?.ts,
+        thread_ts: event?.thread_ts,
+        subtype: event?.subtype,
+        text_preview: event?.text?.substring(0, 50) + '...'
+      });
       
       // メッセージイベントの処理
       if (event.type === 'message' && !event.subtype) {
+        console.log(`${logPrefix} メッセージイベントを処理対象として受理`);
+        
         // ボットのメッセージや編集・削除などのsubtypeがあるメッセージは除外
         const { processMessageEvent } = await import('@/lib/services/incident-processor');
         
@@ -86,8 +98,10 @@ export async function POST(request: NextRequest) {
           type: event.type,
           subtype: event.subtype
         }).catch(error => {
-          console.error('Error in background processing:', error);
+          console.error(`${logPrefix} バックグラウンド処理でエラー:`, error);
         });
+      } else {
+        console.log(`${logPrefix} メッセージイベントをスキップ - type: ${event?.type}, subtype: ${event?.subtype}`);
       }
       
       return NextResponse.json({ ok: true });
