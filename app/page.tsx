@@ -31,10 +31,12 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [severityFilter, setSeverityFilter] = useState<string>('');
   const [confidenceFilter, setConfidenceFilter] = useState<string>('0.7');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
   useEffect(() => {
     fetchIncidents();
-  }, [statusFilter, severityFilter, confidenceFilter]);
+  }, [statusFilter, severityFilter, confidenceFilter, dateFrom, dateTo]);
 
   const fetchIncidents = async () => {
     try {
@@ -42,6 +44,8 @@ export default function Home() {
       if (statusFilter) params.append('status', statusFilter);
       if (severityFilter) params.append('severity_level', severityFilter);
       if (confidenceFilter) params.append('confidence_min', confidenceFilter);
+      if (dateFrom) params.append('from', dateFrom);
+      if (dateTo) params.append('to', dateTo);
 
       const response = await fetch(`/api/incidents?${params}`);
       const data = await response.json();
@@ -108,7 +112,7 @@ export default function Home() {
 
       {/* フィルター */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               ステータス
@@ -155,7 +159,42 @@ export default function Home() {
               <option value="0.9">90%以上</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              開始日
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              終了日
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
         </div>
+        {(dateFrom || dateTo) && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => {
+                setDateFrom('');
+                setDateTo('');
+              }}
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              期間指定をクリア
+            </button>
+          </div>
+        )}
       </div>
 
       {/* インシデント一覧 */}
