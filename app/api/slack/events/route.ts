@@ -72,22 +72,22 @@ export async function POST(request: NextRequest) {
       console.log('Received event:', event);
       
       // メッセージイベントの処理
-      if (event.type === 'message') {
-        // スレッドのメッセージかどうかを確認
-        const isThreadMessage = !!event.thread_ts;
-        console.log('Message details:', {
+      if (event.type === 'message' && !event.subtype) {
+        // ボットのメッセージや編集・削除などのsubtypeがあるメッセージは除外
+        const { processMessageEvent } = await import('@/lib/services/incident-processor');
+        
+        // 非同期で処理（レスポンスを早く返すため）
+        processMessageEvent({
           channel: event.channel,
           user: event.user,
           text: event.text,
           ts: event.ts,
           thread_ts: event.thread_ts,
-          isThreadMessage
+          type: event.type,
+          subtype: event.subtype
+        }).catch(error => {
+          console.error('Error in background processing:', error);
         });
-        
-        // TODO: ここでインシデント検出ロジックを実装
-        // - メッセージをデータベースに保存
-        // - LLMで障害判定
-        // - インシデントの作成/更新
       }
       
       return NextResponse.json({ ok: true });
