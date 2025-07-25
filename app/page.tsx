@@ -197,6 +197,40 @@ export default function Home() {
         )}
       </div>
 
+      {/* エクスポートボタン */}
+      <div className="flex justify-end mb-4 space-x-2">
+        <button
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (statusFilter) params.append('status', statusFilter);
+            if (severityFilter) params.append('severity_level', severityFilter);
+            if (confidenceFilter) params.append('confidence_min', confidenceFilter);
+            if (dateFrom) params.append('from', dateFrom);
+            if (dateTo) params.append('to', dateTo);
+            params.append('format', 'csv');
+            window.location.href = `/api/incidents/export?${params}`;
+          }}
+          className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
+        >
+          CSVエクスポート
+        </button>
+        <button
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (statusFilter) params.append('status', statusFilter);
+            if (severityFilter) params.append('severity_level', severityFilter);
+            if (confidenceFilter) params.append('confidence_min', confidenceFilter);
+            if (dateFrom) params.append('from', dateFrom);
+            if (dateTo) params.append('to', dateTo);
+            params.append('format', 'json');
+            window.location.href = `/api/incidents/export?${params}`;
+          }}
+          className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
+        >
+          JSONエクスポート
+        </button>
+      </div>
+
       {/* インシデント一覧 */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">

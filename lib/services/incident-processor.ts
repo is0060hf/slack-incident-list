@@ -120,8 +120,11 @@ async function createIncidentFromDetection(
     
     console.log(`Created incident: ${incident.id}`);
     
-    // 高重要度の場合は通知
-    if (incident.severity_level >= 3) {
+    // 通知設定の確認と高重要度の場合は通知
+    const notificationEnabled = process.env.NOTIFICATION_ENABLED !== 'false';
+    const severityThreshold = parseInt(process.env.HIGH_SEVERITY_THRESHOLD || '3');
+    
+    if (notificationEnabled && incident.severity_level >= severityThreshold) {
       await notifyHighSeverityIncident(incident, channel);
     }
   } catch (error) {
